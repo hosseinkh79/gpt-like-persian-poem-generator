@@ -23,7 +23,7 @@ text = TRAIN_FILE.read_text(encoding="utf-8")
 
 poems = [
     poem.strip()
-    for poem in text.split("---")
+    for poem in text.split("\n\n")
     if poem.strip()
 ]
 
@@ -42,6 +42,8 @@ tokenizer.train(
     poems,
     verbose=True
 )
+
+tokenizer.add_special_tokens()
 
 
 # ============================================================
