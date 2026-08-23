@@ -178,8 +178,8 @@ def create_dataloaders(
         block_size=block_size,
     )
 
-    print(f"Training poems:   {len(train_dataset)}")
-    print(f"Validation poems: {len(val_dataset)}")
+    # print(f"Training poems:   {len(train_dataset)}")
+    # print(f"Validation poems: {len(val_dataset)}")
 
     # ------------------------------------------------------
     # Create DataLoaders
