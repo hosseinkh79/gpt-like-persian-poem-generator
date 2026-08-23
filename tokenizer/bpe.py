@@ -39,6 +39,12 @@ class SimpleBPE:
         # should be applied during encoding.
         self.merge_ranks = {}
 
+        # Special tokens
+        self.special_tokens = {
+            "<BOS>": None,
+            "<EOS>": None,
+        }
+
     # ========================================================
     # Vocabulary
     # ========================================================
@@ -221,6 +227,18 @@ class SimpleBPE:
         if verbose:
             print()
             print(f"Final vocabulary size: {len(self.vocab)}")
+
+    def add_special_tokens(self):
+        for token in self.special_tokens:
+
+            if token not in self.vocab:
+
+                idx = len(self.vocab)
+
+                self.vocab[token] = idx
+                self.id_to_token[idx] = token
+
+                self.special_tokens[token] = idx
 
     # ========================================================
     # Encoding
