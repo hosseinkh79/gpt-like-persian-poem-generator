@@ -89,14 +89,14 @@ def train(model,
     for epoch in range(epochs):
 
         train_loss = one_step_train(model,
-                                               train_dataloader,
-                                               loss_fn, optimizer,
-                                               device)
+                                    train_dataloader,
+                                    loss_fn, optimizer,
+                                    device)
 
         val_loss = one_step_val(model,
-                                         val_dataloader,
-                                         loss_fn,
-                                         device)
+                                val_dataloader,
+                                loss_fn,
+                                device)
 
         results['train_loss'].append(train_loss)
         results['val_loss'].append(val_loss)
