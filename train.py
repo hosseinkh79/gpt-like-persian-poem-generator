@@ -6,6 +6,8 @@ from tokenizer.bpe import SimpleBPE
 from dataloader import create_dataloaders
 from utils import plot_loss_curves
 
+torch.manual_seed(1337)
+
 def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -13,9 +15,20 @@ def main():
     config = Config()
     
     model = PersianPoemGPT(config=config)
+
+    total_params = sum( p.numel() for p in model.parameters() )
+    print(total_params)
+
+    for name, param in model.named_parameters():
+        print(
+            f"{name:50s} "
+            f"{param.numel():10,} "
+            f"{tuple(param.shape)}"
+        )
+
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=3e-4,
+        lr=config.lr,
         weight_decay=0.01)
         
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -26,7 +39,7 @@ def main():
     train_loader, val_loader = create_dataloaders(
         tokenizer=tokenizer,
         block_size=config.block_size,
-        batch_size=16
+        batch_size=config.batch_size
     )
 
     results = train(
