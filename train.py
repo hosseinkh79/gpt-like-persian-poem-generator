@@ -1,6 +1,6 @@
 import torch
 from engine import train
-from model import PersinaPoemGPT
+from model import PersianPoemGPT
 from config import Config
 from tokenizer.bpe import SimpleBPE
 from dataloader import create_dataloaders
@@ -12,7 +12,7 @@ def main():
     # Instantiate Config if needed
     config = Config()
     
-    model = PersinaPoemGPT(config=config)
+    model = PersianPoemGPT(config=config)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
     loss_fn = torch.nn.CrossEntropyLoss()
 
@@ -31,7 +31,7 @@ def main():
         val_dataloader=val_loader,
         optimizer=optimizer,
         loss_fn=loss_fn,
-        epochs=10,
+        epochs=1,
         device=device
     )
     
