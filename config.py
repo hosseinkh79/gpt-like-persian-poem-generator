@@ -14,3 +14,4 @@ class Config:
     num_layer = 1
     dropout = .3
     device = device
+    epochs = 100
