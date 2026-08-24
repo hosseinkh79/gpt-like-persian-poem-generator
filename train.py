@@ -26,7 +26,7 @@ def main():
     train_loader, val_loader = create_dataloaders(
         tokenizer=tokenizer,
         block_size=config.block_size,
-        batch_size=4
+        batch_size=16
     )
 
     results = train(
@@ -42,12 +42,18 @@ def main():
     plot_loss_curves(results=results)
 
     text = "در هوای تو"
-    # input_ids = tokenizer.encode(text)
-    # print(input_ids)
-    input_idx = torch.tensor(tokenizer.encode(text)).unsqueeze(0).long()
+
+    # Encode and move to device
+    input_ids = tokenizer.encode(text)
+    input_idx = torch.tensor(input_ids).unsqueeze(0).long().to(device)
+
+    # Generate (model is already on device)
     out = model.generate(input_idx, max_new_tokens=100)
-    print(f'output_tokens: {out[0]}')
-    print(tokenizer.decode(out[0].tolist()))
+
+    # Move output back to CPU for decoding (optional but recommended)
+    out_cpu = out.cpu()
+    print(f'output_tokens: {out_cpu[0]}')
+    print(tokenizer.decode(out_cpu[0].tolist()))
 
 if __name__ == "__main__":
     main()

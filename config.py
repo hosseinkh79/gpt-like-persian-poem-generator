@@ -17,4 +17,4 @@ class Config:
     dropout = 0.2
 
     device = device
-    epochs = 15
+    epochs = 20
