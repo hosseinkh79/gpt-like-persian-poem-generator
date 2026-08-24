@@ -10,11 +10,13 @@ class Config:
 
     vocab_size = vocab_size
 
-    embed_dim = 128
+    embed_dim = 64
     num_head = 4
-    block_size = 128
-    num_layer = 2
-    dropout = 0.2
+    block_size = 64
+    num_layer = 4
+    dropout = 0.1
+    lr = 1e-3
+    batch_size = 16
 
     device = device
-    epochs = 20
+    epochs = 1
