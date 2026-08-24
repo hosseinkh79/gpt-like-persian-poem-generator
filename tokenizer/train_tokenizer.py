@@ -12,7 +12,7 @@ from bpe import SimpleBPE
 
 TRAIN_FILE = Path("../data/train.txt")
 
-VOCAB_SIZE = 1000
+VOCAB_SIZE = 55
 
 
 # ============================================================
