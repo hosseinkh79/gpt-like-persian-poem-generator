@@ -13,7 +13,11 @@ def main():
     config = Config()
     
     model = PersianPoemGPT(config=config)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=3e-4,
+        weight_decay=0.01)
+        
     loss_fn = torch.nn.CrossEntropyLoss()
 
     tokenizer = SimpleBPE.load("data/tokenizer.json")
