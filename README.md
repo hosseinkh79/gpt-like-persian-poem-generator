@@ -1,44 +1,101 @@
-# Persian Poem GPT
+# 📝 Persian Poem GPT
 
-A small GPT-like language model built from scratch with PyTorch for generating Persian poetry.
+> A small GPT-style language model built **from scratch in PyTorch** to learn the structure and style of Persian poetry.
 
-The main purpose of this project is **learning how GPT-style language models work**, rather than building a production-quality Persian language model.
+This project is an educational implementation of a decoder-only Transformer (GPT-style) trained on a small Persian poetry corpus.
 
-The model is trained on a small corpus of poems from a single Persian poet.
+The goal is **not** to build a state-of-the-art Persian language model.
 
----
+The goal is to understand, from the ground up, how a GPT-like model works:
 
-## Project Goals
-
-This project was created as a hands-on implementation of a GPT-style language model.
-
-The main goals are:
-
-- Understand how tokenization works.
-- Implement a simple BPE tokenizer.
-- Understand the difference between character-level and BPE tokenization.
-- Prepare a Persian poetry dataset.
-- Build a GPT-like Transformer from scratch using PyTorch.
-- Understand causal self-attention.
-- Train the model using next-token prediction.
-- Generate Persian poetry autoregressively.
-- Experiment with model size, tokenizer, context length, and training behavior.
-
-This is primarily an **educational project**.
+**Raw Persian poems → preprocessing → tokenizer → token IDs → dataset → batches → Transformer → next-token prediction → text generation**
 
 ---
 
-# 1. Dataset
+## ✨ Project Overview
 
-The dataset consists of approximately 145 poems from a single Persian poet.
+This project implements a miniature GPT model specifically for generating Persian poetry.
 
-The poems vary considerably in length.
+The model is trained on poems written by a **single Persian poet**. Because the dataset is intentionally small, the project focuses more on understanding the architecture and training process than on producing a production-quality language model.
 
-Initial dataset statistics:
+The entire pipeline is implemented using Python and PyTorch.
+
+### Main components
+
+- 🇮🇷 Persian text preprocessing
+- 🔤 BPE tokenizer implemented for the project
+- 🧩 Vocabulary construction
+- 🟢 `<BOS>` and 🔴 `<EOS>` special tokens
+- 📦 Custom PyTorch `Dataset`
+- 🚚 PyTorch `DataLoader`
+- 🧠 Decoder-only Transformer
+- 👁️ Causal self-attention
+- 🔀 Multi-head attention
+- ⚡ Feed-forward networks
+- 📍 Learned positional embeddings
+- 📉 Cross-entropy language-modeling loss
+- 🎲 Autoregressive text generation
+
+---
+
+# 🏗️ Architecture
+
+The model follows the basic architecture of a GPT-style decoder:
 
 ```text
-Number of poems:       ~145
-Total characters:      ~142,000
-Average poem length:   ~990 characters
-Shortest poem:         ~165 characters
-Longest poem:          ~4,000 characters
+                    Persian poem
+                         │
+                         ▼
+                  Text preprocessing
+                         │
+                         ▼
+                    BPE tokenizer
+                         │
+                         ▼
+                    Token IDs
+                         │
+                  +------+------+
+                  │             │
+                BOS           EOS
+                  │             │
+                  ▼             ▼
+             Input tokens → Target tokens
+                  │
+                  ▼
+            Token Embeddings
+                  │
+                  +
+                  │
+        Positional Embeddings
+                  │
+                  ▼
+        ┌──────────────────────┐
+        │   Transformer Block  │
+        │                      │
+        │ LayerNorm             │
+        │      ↓               │
+        │ Causal Self-Attention│
+        │      ↓               │
+        │ Residual Connection  │
+        │      ↓               │
+        │ LayerNorm             │
+        │      ↓               │
+        │ Feed Forward Network │
+        │      ↓               │
+        │ Residual Connection  │
+        └──────────────────────┘
+                  │
+                  ▼
+              LayerNorm
+                  │
+                  ▼
+              LM Head
+                  │
+                  ▼
+              Logits
+                  │
+                  ▼
+              Softmax
+                  │
+                  ▼
+          Next token prediction
