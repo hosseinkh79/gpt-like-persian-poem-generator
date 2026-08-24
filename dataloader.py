@@ -1,6 +1,9 @@
 import re
+import random
+
 import torch
 from torch.utils.data import Dataset, DataLoader
+
 
 def load_poems(path):
     """
@@ -13,13 +16,11 @@ def load_poems(path):
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
 
-    # Normalize Windows line endings
     text = text.replace("\r\n", "\n")
 
     # Split poems on blank lines
     poems = re.split(r"\n\s*\n", text)
 
-    # Remove empty poems and surrounding whitespace
     poems = [
         poem.strip()
         for poem in poems
@@ -29,7 +30,7 @@ def load_poems(path):
     return poems
 
 
-class PoemChunkDataset(Dataset):
+class RandomPoemChunkDataset(Dataset):
 
     def __init__(
         self,
@@ -38,34 +39,137 @@ class PoemChunkDataset(Dataset):
         block_size=128,
     ):
         self.block_size = block_size
-
-        self.bos_id = tokenizer.vocab["<BOS>"]
-        self.eos_id = tokenizer.vocab["<EOS>"]
-
-        # Number of actual BPE tokens in each chunk.
-        #
-        # Example with block_size=128:
-        #
-        # <BOS> + 127 content tokens + <EOS>
-        #                ↓
-        #          129 tokens total
-        #
-        # Then:
-        #
-        # x = first 128
-        # y = last 128
-        #
         self.chunk_size = block_size - 1
 
-        if self.chunk_size <= 0:
+        if block_size < 2:
             raise ValueError(
                 "block_size must be at least 2."
             )
 
+        self.bos_id = tokenizer.vocab["<BOS>"]
+        self.eos_id = tokenizer.vocab["<EOS>"]
+
+        # --------------------------------------------------
+        # Tokenize poems
+        # --------------------------------------------------
+
+        self.tokenized_poems = []
+
+        for poem in poems:
+
+            token_ids = tokenizer.encode(poem)
+
+            if len(token_ids) >= self.chunk_size:
+                self.tokenized_poems.append(token_ids)
+
+        if len(self.tokenized_poems) == 0:
+            raise ValueError(
+                "No poem is long enough for this block_size."
+            )
+
+        # --------------------------------------------------
+        # Number of samples per epoch
+        #
+        # We generate roughly 20 random chunks per poem.
+        # --------------------------------------------------
+
+        self.samples_per_poem = 20
+
+        self.num_samples = (
+            len(self.tokenized_poems)
+            * self.samples_per_poem
+        )
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+
+        # --------------------------------------------------
+        # Randomly select a poem
+        # --------------------------------------------------
+
+        poem = random.choice(
+            self.tokenized_poems
+        )
+
+        # --------------------------------------------------
+        # Random starting position
+        # --------------------------------------------------
+
+        max_start = (
+            len(poem) - self.chunk_size
+        )
+
+        start = random.randint(
+            0,
+            max_start
+        )
+
+        # --------------------------------------------------
+        # Get random chunk
+        # --------------------------------------------------
+
+        chunk = poem[
+            start : start + self.chunk_size
+        ]
+
+        # --------------------------------------------------
+        # BOS + content + EOS
+        # --------------------------------------------------
+
+        sequence = (
+            [self.bos_id]
+            + chunk
+            + [self.eos_id]
+        )
+
+        assert len(sequence) == (
+            self.block_size + 1
+        )
+
+        # --------------------------------------------------
+        # GPT input / target
+        # --------------------------------------------------
+
+        x = torch.tensor(
+            sequence[:-1],
+            dtype=torch.long
+        )
+
+        y = torch.tensor(
+            sequence[1:],
+            dtype=torch.long
+        )
+
+        return x, y
+
+
+class FixedPoemChunkDataset(Dataset):
+
+    """
+    Deterministic validation dataset.
+
+    Validation chunks do not change between epochs.
+    """
+
+    def __init__(
+        self,
+        poems,
+        tokenizer,
+        block_size=128,
+    ):
+
+        self.block_size = block_size
+        self.chunk_size = block_size - 1
+
+        self.bos_id = tokenizer.vocab["<BOS>"]
+        self.eos_id = tokenizer.vocab["<EOS>"]
+
         self.samples = []
 
         # --------------------------------------------------
-        # Process every poem independently
+        # Tokenize poems
         # --------------------------------------------------
 
         for poem in poems:
@@ -73,7 +177,7 @@ class PoemChunkDataset(Dataset):
             token_ids = tokenizer.encode(poem)
 
             # --------------------------------------------------
-            # Split the poem into independent chunks
+            # Fixed chunks
             # --------------------------------------------------
 
             for start in range(
@@ -86,16 +190,9 @@ class PoemChunkDataset(Dataset):
                     start : start + self.chunk_size
                 ]
 
-                # Ignore very short final chunks.
-                #
-                # We want every training example to have
-                # exactly block_size tokens.
+                # Ignore incomplete final chunk
                 if len(chunk) < self.chunk_size:
                     continue
-
-                # --------------------------------------------------
-                # Add poem/chunk boundaries
-                # --------------------------------------------------
 
                 sequence = (
                     [self.bos_id]
@@ -103,20 +200,9 @@ class PoemChunkDataset(Dataset):
                     + [self.eos_id]
                 )
 
-                # sequence length = block_size + 1
-                #
-                # Example:
-                #
-                # block_size = 128
-                #
-                # [BOS] + 127 tokens + [EOS]
-                # = 129 tokens
-                #
-                assert len(sequence) == self.block_size + 1
-
-                # --------------------------------------------------
-                # Create input and target
-                # --------------------------------------------------
+                assert len(sequence) == (
+                    self.block_size + 1
+                )
 
                 x = torch.tensor(
                     sequence[:-1],
@@ -128,11 +214,9 @@ class PoemChunkDataset(Dataset):
                     dtype=torch.long
                 )
 
-                # Both are exactly block_size
-                assert x.shape == (self.block_size,)
-                assert y.shape == (self.block_size,)
-
-                self.samples.append((x, y))
+                self.samples.append(
+                    (x, y)
+                )
 
     def __len__(self):
         return len(self.samples)
@@ -148,9 +232,6 @@ def create_dataloaders(
     block_size=128,
     batch_size=32,
 ):
-    """
-    Create training and validation DataLoaders.
-    """
 
     # ------------------------------------------------------
     # Load poems
@@ -159,36 +240,42 @@ def create_dataloaders(
     train_poems = load_poems(train_path)
     val_poems = load_poems(val_path)
 
-    # print(f"Training poems:   {len(train_poems)}")
-    # print(f"Validation poems: {len(val_poems)}")
+    print(
+        f"Training poems:   {len(train_poems)}"
+    )
+
+    print(
+        f"Validation poems: {len(val_poems)}"
+    )
 
     # ------------------------------------------------------
-    # Create datasets
+    # Training dataset
     # ------------------------------------------------------
 
-    train_dataset = PoemChunkDataset(
+    train_dataset = RandomPoemChunkDataset(
         poems=train_poems,
         tokenizer=tokenizer,
         block_size=block_size,
     )
 
-    val_dataset = PoemChunkDataset(
+    # ------------------------------------------------------
+    # Validation dataset
+    # ------------------------------------------------------
+
+    val_dataset = FixedPoemChunkDataset(
         poems=val_poems,
         tokenizer=tokenizer,
         block_size=block_size,
     )
 
-    # print(f"Training poems:   {len(train_dataset)}")
-    # print(f"Validation poems: {len(val_dataset)}")
-
     # ------------------------------------------------------
-    # Create DataLoaders
+    # DataLoaders
     # ------------------------------------------------------
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
     )
 
     val_loader = DataLoader(
@@ -197,19 +284,12 @@ def create_dataloaders(
         shuffle=False,
     )
 
+    print(
+        f"Training samples:   {len(train_dataset)}"
+    )
+
+    print(
+        f"Validation samples: {len(val_dataset)}"
+    )
+
     return train_loader, val_loader
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
